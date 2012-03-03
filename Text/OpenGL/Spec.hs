@@ -206,8 +206,7 @@ hexSuffix = optional $ try (Ull <$ string "ull") <|> (U <$ string "u")
 
 pComment :: P String
 pComment = (\a b c -> concat [a,b,c]) <$>
-  blanks <*> (string "#") <*> (many $ noneOf "\n")
-  <* eol
+  blanks <*> (string "#") <*> manyTill anyChar eol
 
 pBlankLine :: P ()
 pBlankLine = () <$ (blanks >> eol)
