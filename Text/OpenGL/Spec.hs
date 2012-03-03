@@ -169,17 +169,15 @@ digit' :: P Int
 digit' = (read . (:[])) <$> digit
 
 identifier :: P String
-identifier = --many1 . oneOf $ "_" ++ ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z']
-  many1 pIdentChar
+identifier = many1 pIdentChar
 
 depIdentifier :: P String
-depIdentifier = many1 ( notFollowedBy (string "_DEPRECATED") -- *> oneOf idents)
+depIdentifier = many1 ( notFollowedBy (string "_DEPRECATED")
     *> pIdentChar)
-    where idents = "_" ++ ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z']
 
 pIdentChar :: P Char
 pIdentChar = satisfy $ \c ->
-     (c >= '0' && c <= 'z')
+     (c >= '0' && c <= 'z') -- for fast exclusion of spaces and some other digits
   && (not (( c > '9' && c < 'A' ) || (c > 'Z' && c < 'a' ))
           || c == '_')
 
