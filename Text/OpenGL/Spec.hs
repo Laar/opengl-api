@@ -169,11 +169,19 @@ digit' :: P Int
 digit' = (read . (:[])) <$> digit
 
 identifier :: P String
-identifier = many1 . oneOf $ "_" ++ ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z']
+identifier = --many1 . oneOf $ "_" ++ ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z']
+  many1 pIdentChar
 
 depIdentifier :: P String
-depIdentifier = many1 ( notFollowedBy (string "_DEPRECATED") *> oneOf idents)
+depIdentifier = many1 ( notFollowedBy (string "_DEPRECATED") -- *> oneOf idents)
+    *> pIdentChar)
     where idents = "_" ++ ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z']
+
+pIdentChar :: P Char
+pIdentChar = satisfy $ \c ->
+     (c >= '0' && c <= 'z')
+  && (not (( c > '9' && c < 'A' ) || (c > 'Z' && c < 'a' ))
+          || c == '_')
 
 
 identifier_ :: P String
