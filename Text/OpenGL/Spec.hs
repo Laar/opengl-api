@@ -749,26 +749,26 @@ pFunction = Function <$>
 
 pProp :: P FunLine
 pProp = Prop <$> (blanks1 *> choice
-  [ try pReturn
-  , try pParam
-  , try pCategory'
+  [ pReturn
+  , pParam
+  , pCategory'
   , try pVersion
   , try pGlxropcode
-  , try pOffset
-  , try pWglflags
+  , pOffset
+  , pWglflags
   , try pDlflags
   , try pGlxflags
   , try pGlxsingle
-  , try pDeprecated
-  , try pVectorequiv
-  , try pExtension
+  , pDeprecated
+  , pVectorequiv
+  , pExtension
   , try pGlxvendorpriv
   , try pGlfflags
-  , try pBeginend
+  , pBeginend
   , try pGlxvectorequiv
-  , try pAlias
-  , try pSubcategory
-  , try pGlextmask
+  , pAlias
+  , pSubcategory
+  , pGlextmask
   ])
 
 pAt :: P FunLine
