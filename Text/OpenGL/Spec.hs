@@ -153,11 +153,11 @@ pEnumLine = choice
   , pUse
   ]
 
-blanks :: P String
-blanks = many (oneOf " \t")
+blanks :: P ()
+blanks = skipMany (oneOf " \t")
 
-blanks1 :: P String
-blanks1 = many1 (oneOf " \t")
+blanks1 :: P ()
+blanks1 = skipMany1 (oneOf " \t")
 
 token :: String -> P String
 token s = string s <* blanks
@@ -205,11 +205,11 @@ hexSuffix :: P (Maybe HexSuffix)
 hexSuffix = optional $ try (Ull <$ string "ull") <|> (U <$ string "u")
 
 pComment :: P String
-pComment = (\a b c -> concat [a,b,c]) <$>
-  blanks <*> (string "#") <*> manyTill anyChar eol
+pComment = (:) <$>
+  (char '#') <*> manyTill anyChar eol
 
 pBlankLine :: P ()
-pBlankLine = () <$ (blanks >> eol)
+pBlankLine = blanks *> eol
 
 pStart :: P EnumLine
 pStart = Start <$> pCategory <*>
@@ -632,7 +632,7 @@ tag :: P String
 tag = many1 . oneOf $ "_-" ++ ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z']
 
 field :: String -> P ()
-field s = () <$ (blanks1 >> token s)
+field s = () <$ (blanks1 *> token s)
 
 question :: P Question
 question =
