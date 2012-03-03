@@ -245,6 +245,7 @@ pCategory =
   -- alphaNum is enough for enumext.spec;
   -- tag is used for the CategoryProp.
 
+{-
 pExt :: P Extension
 pExt = choice $ map (\ (n,t) -> try (t <$ try (string n)))
   [ ("3DFX",    DFX)
@@ -272,6 +273,36 @@ pExt = choice $ map (\ (n,t) -> try (t <$ try (string n)))
   , ("SUNX",    SUNX)
   , ("SUN",     SUN)
   , ("WIN",     WIN)
+  ]
+-}
+pExt :: P Extension
+pExt = try $ choice
+  [ char 'A' *> choice
+    [ ARB   <$ string "RB"
+    , AMD   <$ string "MD"
+    , ATI   <$ string "TI"
+    , APPLE <$ string "PPLE"
+    ]
+  , EXT <$ string "EXT"
+  , NV  <$ string "NV"
+  , char 'S' *> choice
+    [ string "GI" *> choice [SGIS <$ char 'S', SGIX <$ char 'X', pure SGI]
+    , string "UN" *> option SUN (SUNX <$ char 'X')
+    , S3 <$ char '3'
+    ]
+  , char 'I' *> choice
+    [ IBM   <$ string "BM"
+    , INGR  <$ (try $ string "NGR")
+    , INTEL <$ string "NTEL"
+    ]
+  , string "MESA" *> option  MESA (MESAX <$ char 'X')
+  , char 'O' *> ((OES <$ string "ES") <|> (OML <$ string "ML"))
+  , DFX     <$ string "3DFX"
+  , WIN     <$ string "WIN"
+  , PGI     <$ string "PGI"
+  , REND    <$ string "REND"
+  , GREMEDY <$ string "GREMEDY"
+  , HP      <$ string "HP"
   ]
 
 ----------------------------------------------------------------------
