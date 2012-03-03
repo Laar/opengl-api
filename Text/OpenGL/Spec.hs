@@ -662,9 +662,6 @@ funLine = parse pFunLine "funLine"
 tag :: P String
 tag = many1 . oneOf $ "_-" ++ ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z']
 
-field :: String -> P ()
-field s = () <$ (blanks1 *> token s)
-
 question :: P Question
 question =
   Number . read <$> many1 digit <* opt "re"
@@ -751,7 +748,7 @@ pFunction = Function <$>
   <* eol
 
 pProp :: P FunLine
-pProp = Prop <$> choice
+pProp = Prop <$> (blanks1 *> choice
   [ try pReturn
   , try pParam
   , try pCategory'
@@ -772,13 +769,13 @@ pProp = Prop <$> choice
   , try pAlias
   , try pSubcategory
   , try pGlextmask
-  ]
+  ])
 
 pAt :: P FunLine
 pAt = At <$> (token "@@@" *> many (noneOf "\n")) <* eol
 
 pReturn :: P Prop
-pReturn = Return <$> (field "return" *> pReturnType) <* eol
+pReturn = Return <$> (token "return" *> pReturnType) <* eol
 
 pReturnType :: P ReturnType
 pReturnType = choice
@@ -800,7 +797,7 @@ pReturnType = choice
 
 pParam :: P Prop
 pParam = Param <$>
-  (field "param" *> identifier_) <*> pParamType <* eol
+  (token "param" *> identifier_) <*> pParamType <* eol
 
 pParamType :: P ParamType
 pParamType = ParamType <$>
@@ -825,22 +822,22 @@ pPassing = Value <$ string "value"
 
 pCategory' :: P Prop
 pCategory' = Category <$>
-  (field "category" *> pCategory <* blanks) <*>
+  (token "category" *> pCategory <* blanks) <*>
   (optional $ token "# old:" *> pCategory)
   <* eol
 
 pVersion :: P Prop
 pVersion = FVersion <$>
-  (field "version" *> digit' <* char '.') <*> digit' <* eol
+  (token "version" *> digit' <* char '.') <*> digit' <* eol
 
 pGlxropcode :: P Prop
-pGlxropcode = Glxropcode <$> (field "glxropcode" *> question) <* eol
+pGlxropcode = Glxropcode <$> (token "glxropcode" *> question) <* eol
 
 pOffset :: P Prop
-pOffset = Offset <$> (field "offset" *> optional question) <* eol
+pOffset = Offset <$> (token "offset" *> optional question) <* eol
 
 pWglflags :: P Prop
-pWglflags = Wglflags <$> (field "wglflags" *> many1 pWglflag) <* eol
+pWglflags = Wglflags <$> (token "wglflags" *> many1 pWglflag) <* eol
 
 pWglflag :: P Wglflag
 pWglflag = choice
@@ -851,7 +848,7 @@ pWglflag = choice
   ] <* blanks
 
 pDlflags :: P Prop
-pDlflags = Dlflags <$> (field "dlflags" *> pDlflag) <* eol
+pDlflags = Dlflags <$> (token "dlflags" *> pDlflag) <* eol
 
 pDlflag :: P Dlflag
 pDlflag = choice
@@ -861,7 +858,7 @@ pDlflag = choice
 
 pGlxflags :: P Prop
 pGlxflags = Glxflags <$>
-  (field "glxflags" *> many pGlxflag) <*>
+  (token "glxflags" *> many pGlxflag) <*>
   optional ( token "###" *> many pGlxflag)
   <* eol
 
@@ -877,17 +874,17 @@ pGlxflag = choice
   ] <* blanks
 
 pGlxsingle :: P Prop
-pGlxsingle = Glxsingle <$> (field "glxsingle" *> question) <* eol
+pGlxsingle = Glxsingle <$> (token "glxsingle" *> question) <* eol
 
 pDeprecated :: P Prop
 pDeprecated = Deprecated <$>
-  (field "deprecated" *> digit' <* char '.') <*> digit' <* eol
+  (token "deprecated" *> digit' <* char '.') <*> digit' <* eol
 
 pVectorequiv :: P Prop
-pVectorequiv = Vectorequiv <$> (field "vectorequiv" *> identifier_) <* eol
+pVectorequiv = Vectorequiv <$> (token "vectorequiv" *> identifier_) <* eol
 
 pExtension :: P Prop
-pExtension =  FExtension <$> (field "extension" *> many pFExtension) <* eol
+pExtension =  FExtension <$> (token "extension" *> many pFExtension) <* eol
 
 pFExtension :: P FExtension
 pFExtension = choice
@@ -900,10 +897,10 @@ pFExtension = choice
 
 pGlxvendorpriv :: P Prop
 pGlxvendorpriv =
-  Glxvendorpriv <$> (field "glxvendorpriv" *> question) <* eol
+  Glxvendorpriv <$> (token "glxvendorpriv" *> question) <* eol
 
 pGlfflags :: P Prop
-pGlfflags = Glfflags <$> (field "glfflags" *> many1 pGlfflag) <* eol
+pGlfflags = Glfflags <$> (token "glfflags" *> many1 pGlfflag) <* eol
 
 pGlfflag :: P Glfflag
 pGlfflag = choice
@@ -917,21 +914,21 @@ pGlfflag = choice
   ] <* blanks
 
 pBeginend :: P Prop
-pBeginend = AllowInside <$ (field "beginend" *> string "allow-inside") <* eol
+pBeginend = AllowInside <$ (token "beginend" *> string "allow-inside") <* eol
 
 pGlxvectorequiv :: P Prop
 pGlxvectorequiv =
-  Glxvectorequiv <$> (field "glxvectorequiv" *> identifier_) <* eol
+  Glxvectorequiv <$> (token "glxvectorequiv" *> identifier_) <* eol
 
 pAlias :: P Prop
-pAlias = Alias <$> (field "alias" *> identifier_) <* eol
+pAlias = Alias <$> (token "alias" *> identifier_) <* eol
 
 pSubcategory :: P Prop
-pSubcategory = Subcategory <$> (field "subcategory" *> identifier_) <* eol
+pSubcategory = Subcategory <$> (token "subcategory" *> identifier_) <* eol
 
 pGlextmask :: P Prop
 pGlextmask =
-  Glextmask <$> (field "glextmask" *> sepBy identifier (token "|")) <* eol
+  Glextmask <$> (token "glextmask" *> sepBy identifier (token "|")) <* eol
 
 ----------------------------------------------------------------------
 -- Predicates
