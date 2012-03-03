@@ -46,7 +46,7 @@ module Text.OpenGL.Spec (
   ) where
 
 import Numeric (readHex, showHex)
-import Data.Char (toUpper)
+import Data.Char (toUpper, ord)
 import Control.Applicative
 import Text.Parsec hiding
     (many, optional, (<|>), token)
@@ -166,7 +166,7 @@ eol :: P ()
 eol = () <$ char '\n'
 
 digit' :: P Int
-digit' = (read . (:[])) <$> digit
+digit' = (\c -> ord c - ord '0') <$> digit
 
 identifier :: P String
 identifier = many1 pIdentChar
