@@ -615,9 +615,10 @@ data Glfflag =
 -- Parsing (line oriented)
 ----------------------------------------------------------------------
 
+-- TODO could a difference list improve this.
 -- | Parse a complete gl.spec.
 funLines :: String -> Either ParseError [FunLine]
-funLines = parse (many pFunLine <* eof) "funLines"
+funLines = parse (fmap concat (many pFunLines <* eof)) "funLines"
 
 -- | Try to parse a line to its 'TMLine' representation.
 -- The '\n' character should be present at the end of the input.
@@ -650,6 +651,25 @@ pFunLine = choice
   , try pFunction
   , try pProp
   , pAt
+  ]
+
+-- Tries to parse multiple lines after each other as there are some more
+-- common constructs in the spec. The most important one is the first
+-- one, a combination of a blank line, function line and several
+-- properties, in total the standerd function definition. Comments are also
+-- parsed in groups as there are frequent groups of them.
+pFunLines :: P [FunLine]
+pFunLines = choice
+  [ try $ (\b f ps -> b:f:ps)
+       <$> (FBlankLine <$ pBlankLine) <*> pFunction <*> many1 pProp
+  , try $ many1 (FComment <$> pComment)
+  , try $ pure <$>  pFPassthru
+  , try $ pure <$> pFunction
+  , try $ (pure FBlankLine <$ pBlankLine)
+  , try $ many1 pProp
+  , try $ pure <$> pNewCategory
+  , try $ many1 pProperty
+  , many1 pAt
   ]
 
 pFPassthru :: P FunLine
