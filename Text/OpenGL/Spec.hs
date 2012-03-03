@@ -246,35 +246,33 @@ pCategory =
   -- tag is used for the CategoryProp.
 
 pExt :: P Extension
-pExt = choice $ map (fmap r . try . string)
-  [ "3DFX"
-  , "AMD"
-  , "APPLE"
-  , "ARB"
-  , "ATI"
-  , "EXT"
-  , "GREMEDY"
-  , "HP"
-  , "IBM"
-  , "INGR"
-  , "INTEL"
-  , "MESAX"
-  , "MESA"
-  , "NV"
-  , "OES"
-  , "OML"
-  , "PGI"
-  , "REND"
-  , "S3"
-  , "SGIS"
-  , "SGIX"
-  , "SGI"
-  , "SUNX"
-  , "SUN"
-  , "WIN"
+pExt = choice $ map (\ (n,t) -> try (t <$ try (string n)))
+  [ ("3DFX",    DFX)
+  , ("AMD",     AMD)
+  , ("APPLE",   APPLE)
+  , ("ARB",     ARB)
+  , ("ATI",     ATI)
+  , ("EXT",     EXT)
+  , ("GREMEDY", GREMEDY)
+  , ("HP",      HP)
+  , ("IBM",     IBM)
+  , ("INGR",    INGR)
+  , ("INTEL",   INTEL)
+  , ("MESAX",   MESAX)
+  , ("MESA",    MESA)
+  , ("NV",      NV)
+  , ("OES",     OES)
+  , ("OML",     OML)
+  , ("PGI",     PGI)
+  , ("REND",    REND)
+  , ("S3",      S3)
+  , ("SGIS",    SGIS)
+  , ("SGIX",    SGIX)
+  , ("SGI",     SGI)
+  , ("SUNX",    SUNX)
+  , ("SUN",     SUN)
+  , ("WIN",     WIN)
   ]
-  where r "3DFX" = {-3-}DFX
-        r x = read x
 
 ----------------------------------------------------------------------
 -- Printing
