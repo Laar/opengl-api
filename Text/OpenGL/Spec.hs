@@ -134,7 +134,7 @@ data Extension =
 
 -- | Parse a complete enumext.spec.
 enumLines :: String -> Either ParseError [EnumLine]
-enumLines = parse (many pEnumLine <* eof) "enumLines"
+enumLines = {-# SCC "enumLines"#-} parse (many pEnumLine <* eof) "enumLines"
 
 -- | Try to parse a line to its 'EnumLine' representation.
 -- The '\n' character should be present at the end of the input.
@@ -232,7 +232,7 @@ pUse = Use <$>
   identifier_ <* optional (blanks *> string "#" *> (many $ noneOf "\n")) <* eol
 
 pCategory :: P Category
-pCategory =
+pCategory = {-# SCC "pCategory"#-}
   Version <$>
   try (string "VERSION_" *> digit') <*>
   (char '_' *> digit') <*>
@@ -446,7 +446,7 @@ data TmType =
 
 -- | Parse a complete gl.tm.
 tmLines :: String -> Either ParseError [TmLine]
-tmLines = parse (many pTmLine <* eof) "tmLines"
+tmLines = {-# SCC "tmLines" #-}  parse (many pTmLine <* eof) "tmLines"
 
 -- | Try to parse a line to its 'TMLine' representation.
 -- The '\n' character should be present at the end of the input.
@@ -652,7 +652,8 @@ data Glfflag =
 -- TODO could a difference list improve this.
 -- | Parse a complete gl.spec.
 funLines :: String -> Either ParseError [FunLine]
-funLines = parse (fmap concat (many pFunLines <* eof)) "funLines"
+funLines = {-# SCC "funLines"#-}
+    parse (fmap concat (many pFunLines <* eof)) "funLines"
 
 -- | Try to parse a line to its 'TMLine' representation.
 -- The '\n' character should be present at the end of the input.
