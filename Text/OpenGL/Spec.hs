@@ -7,7 +7,7 @@
 -- There is also some code to print the result back to something
 -- close to the original representation, for checking purpose.
 module Text.OpenGL.Spec (
-  EnumLine(..), Category(..), Value(..), Extension(..),
+  EnumLine(..), Category(..), Value(..), Extension(..), Profile(..),
   enumLines, enumLine,
   parseAndShow, reparse,
   showCategory, pCategory,
@@ -27,6 +27,7 @@ module Text.OpenGL.Spec (
   isParam,
   isCategory,
   isSubcategory,
+  isProfile,
   isFVersion,
   isGlxropcode,
   isOffset,
@@ -74,6 +75,8 @@ data EnumLine =
   -- ^ A single blanck line.
   | Start Category (Maybe String)
   -- ^ The beginning of an enumeration.
+  | Profile Profile
+  -- ^ The signal for a new profile
   | Passthru String
   -- ^ A passthru line with its comment.
   | Enum String Value (Maybe String)
@@ -98,6 +101,10 @@ data Value = Hex Integer Int (Maybe HexSuffix) | Deci Int | Identifier String
 data HexSuffix = U | Ull
   deriving (Eq, Show)
 
+data Profile
+    = Compatibility
+    deriving (Eq, Show)
+
 -- Note: what for FfdMaskSGIX? This will be a Name.
 -- | The different kinds of extension used to start an enumeration.
 data Extension =
@@ -112,6 +119,7 @@ data Extension =
   | IBM
   | INGR
   | INTEL
+  | KHR
   | MESA
   | MESAX
   | NV
@@ -150,6 +158,7 @@ pEnumLine = choice
   , try pStart
   , try pPassthru
   , try pEnum
+  , try pProfile
   , pUse
   ]
 
@@ -225,6 +234,14 @@ pEnum = Enum <$>
   (blanks1 *> identifier_) <*>
   (char '=' *> blanks *> value) <*>
   (optional $ blanks *> char '#' *> blanks *> many1 (noneOf "\n")) <* eol
+
+pProfile :: P EnumLine
+pProfile = Profile <$>
+    (token "profile:" *> blanks *> pProfileVal <* eol)
+
+pProfileVal :: P Profile
+pProfileVal =
+    Compatibility <$ string "compatibility"
 
 pUse :: P EnumLine
 pUse = Use <$>
@@ -303,6 +320,7 @@ pExt = try $ choice
   , REND    <$ string "REND"
   , GREMEDY <$ string "GREMEDY"
   , HP      <$ string "HP"
+  , KHR     <$ string "KHR"
   ]
 
 ----------------------------------------------------------------------
@@ -334,7 +352,12 @@ showEnumLine el = case el of
   Passthru x -> "passthru: /* " ++ x ++ "*/"
   Enum a b Nothing -> "\t" ++ a ++ tabstop 55 a ++ "= " ++ showValue b
   Enum a b (Just x) -> "\t" ++ a ++ tabstop 55 a ++ "= " ++ showValue b ++ " # " ++ x
+  Profile p -> "profile: " ++ showProfile p
   Use a b -> "\tuse " ++ showCategory a ++ tabstop 39 (showCategory a ++ "    ") ++ "    " ++ b
+
+showProfile :: Profile -> String
+showProfile p = case p of
+    Compatibility -> "compatibility"
 
 tabstop :: Int -> String -> String
 tabstop t a = replicate ((t - length a) `div` 8) '\t'
@@ -405,6 +428,7 @@ data TmType =
   | GLbyte
   | GLchar
   | GLcharARB
+  | GLcharStarConst
   | GLclampd
   | GLclampf
   | GLdouble
@@ -436,6 +460,7 @@ data TmType =
   | GLvoid
   | GLvoidStarConst
   | GLvdpauSurfaceNV
+  | GLdebugproc
   | GLdebugprocAMD
   | GLdebugprocARB
   deriving (Eq, Read, Show)
@@ -471,6 +496,7 @@ pTmType = choice $ map try
   , ConstGLubyte <$ token "const GLubyte"
   , UnderscoreGLfuncptr <$ token "_GLfuncptr"
   , GLvoidStarConst <$ token "GLvoid* const"
+  , GLcharStarConst <$ token "GLchar* const"
   , GLboolean <$ token "GLboolean"
   , GLcharARB <$ token "GLcharARB"
   , GLchar <$ token "GLchar"
@@ -483,6 +509,7 @@ pTmType = choice $ map try
   , GLvdpauSurfaceNV <$ token "GLvdpauSurfaceNV"
   , GLdebugprocAMD <$ token "GLDEBUGPROCAMD"
   , GLdebugprocARB <$ token "GLDEBUGPROCARB"
+  , GLdebugproc    <$ token "GLDEBUGPROC"
   , read <$> identifier
   ]
 
@@ -529,6 +556,8 @@ data Property =
   -- ^ Could have been hardcoded too.
   | DeprecatedProp [(Int,Int)]
   -- ^ Could have been hardcoded too. Only 3.1 for now.
+  | ProfileProp [Profile]
+  -- ^ only compatibility for now.
   | GlxsingleProp
   -- ^ Hardcoded counter part: *
   | GlxropcodeProp
@@ -564,6 +593,7 @@ data Prop =
   -- ^ This pairs the name of a parameter with its type.
   | Category Category (Maybe Category)
    -- ^ The Maybe is a commented old value.
+  | FProfile Profile
   | Subcategory String
   | FVersion Int Int
   | Glxropcode Question
@@ -596,14 +626,17 @@ data ReturnType =
     Boolean
   | BufferOffset
   | ErrorCode
+  | Float32
   | FramebufferStatus
   | GLEnum
   | HandleARB
   | Int32
   | List
+  | Path
   | String
   | Sync
   | UInt32
+  | UInt64
   | Void
   | VoidPointer
   | VdpauSurfaceNV
@@ -632,7 +665,7 @@ data Wglflag =
     WglClientHandcode | WglServerHandcode | WglSmallData | WglBatchable
   deriving (Eq, Show)
 
-data Dlflag = DlNotlistable | DlHandcode
+data Dlflag = DlNotlistable | DlHandcode | DlPrepad
   deriving (Eq, Show)
 
 data Glxflag =
@@ -714,7 +747,7 @@ pProperty = Property <$> choice (map try
   [ RequiredProps <$ string "required-props:"
   , ParamProp <$ (token "param:" *> token "retval" *> string "retained")
   , DlflagsProp <$ (token "dlflags:" *> token "notlistable" *>
-    string "handcode")
+    string "handcode" *> optional (blanks *> string "prepad"))
   , GlxflagsProp <$ (token "glxflags:" *>
     token "client-intercept" *> token "client-handcode" *>
     token "server-handcode" *> token "EXT" *> token "SGI" *>
@@ -723,6 +756,7 @@ pProperty = Property <$> choice (map try
   , CategoryProp <$> (token "category:" *> many (pCategory <* blanks))
   , VersionProp <$> (token "version:" *> many (version <* blanks))
   , DeprecatedProp <$> (token "deprecated:" *> many (version <* blanks))
+  , ProfileProp <$> (token "profile:" *> many (pProfileVal <* blanks))
   , GlxsingleProp <$ (token "glxsingle:" *> string "*")
   , GlxropcodeProp <$ (token "glxropcode:" *> string "*")
   , GlxvendorprivProp <$ (token "glxvendorpriv:" *> string "*")
@@ -751,8 +785,9 @@ pFunction = Function <$>
 pProp :: P FunLine
 pProp = Prop <$> (blanks1 *> choice
   [ pReturn
-  , pParam
+  , try pParam
   , pCategory'
+  , pFProfile
   , try pVersion
   , try pGlxropcode
   , pOffset
@@ -783,14 +818,17 @@ pReturnType = choice
   [ try $ Boolean <$ string "Boolean"
   , BufferOffset <$ string "BufferOffset"
   , ErrorCode <$ string "ErrorCode"
+  , try $ Float32   <$ string "Float32"
   , FramebufferStatus <$ string "FramebufferStatus"
   , GLEnum <$ string "GLenum"
   , HandleARB <$ string "handleARB"
   , Int32 <$ string "Int32"
   , List <$ string "List"
+  , Path <$ string "Path"
   , try $ String <$ string "String"
   , Sync <$ string "sync"
-  , UInt32 <$ string "UInt32"
+  , try $ UInt32 <$ string "UInt32"
+  , try $ UInt64 <$ string "UInt64"
   , try $ Void <$ string "void"
   , VoidPointer <$ string "VoidPointer"
   , VdpauSurfaceNV <$ string "vdpauSurfaceNV"
@@ -827,6 +865,10 @@ pCategory' = Category <$>
   (optional $ token "# old:" *> pCategory)
   <* eol
 
+pFProfile :: P Prop
+pFProfile = FProfile <$>
+    (token "profile" *> pProfileVal) <* eol
+
 pVersion :: P Prop
 pVersion = FVersion <$>
   (token "version" *> digit' <* char '.') <*> digit' <* eol
@@ -855,6 +897,7 @@ pDlflag :: P Dlflag
 pDlflag = choice
   [ DlNotlistable <$ string "notlistable"
   , DlHandcode <$ string "handcode"
+  , DlPrepad   <$ string "prepad"
   ]
 
 pGlxflags :: P Prop
@@ -950,6 +993,10 @@ isCategory _ = False
 isSubcategory :: Prop -> Bool
 isSubcategory (Subcategory _) = True
 isSubcategory _ = False
+
+isProfile :: Prop -> Bool
+isProfile (FProfile _) = True
+isProfile _ = False
 
 isFVersion :: Prop -> Bool
 isFVersion (FVersion _ _) = True
