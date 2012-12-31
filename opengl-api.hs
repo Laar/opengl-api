@@ -20,7 +20,7 @@ versionString =
 main :: IO ()
 main = (>>= processCmd) . cmdArgs $
   modes
-   [ header, checks
+   [ header, checks, dump
    ] 
   &= summary versionString
   &= program "opengl-api"
@@ -28,6 +28,7 @@ main = (>>= processCmd) . cmdArgs $
 data Cmd =
     Header { tmFn :: String, esFn :: String, fsFn :: String }
   | Checks { tmFn :: String, esFn :: String, fsFn :: String }
+  | Dump  { tmFn :: String, esFn :: String, fsFn :: String }
   deriving (Show, Eq, Data, Typeable)
 
 header :: Cmd
@@ -49,6 +50,16 @@ checks = Checks
   , fsFn = "gl.spec" &= typFile &= help "The functions file"
     &= explicit &= name "f" &= name "functions"
   } &= help "Produce a drop-in replacement for gl.h with glGetError checks."
+
+dump :: Cmd
+dump = Dump
+  { tmFn = "gl.tm" &= typFile &= help "The type map file"
+    &= explicit &= name "t" &= name "type-map"
+  , esFn = "enumext.spec" &= typFile &= help "The enumerations file"
+    &= explicit &= name "e" &= name "enumerations"
+  , fsFn = "gl.spec" &= typFile &= help "The functions file"
+    &= explicit &= name "f" &= name "functions"
+  } &= help "Parse the spec and dump it to the standard output for testing."
 
 processCmd :: Cmd -> IO ()
 processCmd (Header {tmFn,esFn,fsFn})= do
@@ -73,5 +84,15 @@ processCmd (Checks {tmFn,esFn,fsFn})= do
       let (h,_) = mkChecks tm es fs
       writeFile "gl-checks.h" h
       -- writeFile "gl-checks.c" c -- TODO make one with macro only, and one with macro + c code
-
-
+processCmd (Dump {tmFn, esFn, fsFn}) = do
+  tm' <- tmLines <$> readFile tmFn
+  es' <- enumLines <$> readFile esFn
+  fs' <- funLines <$> readFile fsFn
+  case (tm',es',fs') of
+    (Left err,_,_) -> putStrLn $ tmFn ++":\n" ++ show err
+    (_,Left err,_) -> putStrLn $ esFn ++ ":\n" ++ show err
+    (_,_,Left err) -> putStrLn $ fsFn ++ ":\n" ++ show err
+    (Right tm,Right es,Right fs) -> do
+      print tm
+      print es
+      print fs
